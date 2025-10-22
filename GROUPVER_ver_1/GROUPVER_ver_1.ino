@@ -26,11 +26,42 @@ void update_dashboard_ui() {
         // lv_label_set_text_fmt(ui_LabelECUByte1, "0x%02X", vehicleData.ecu_byte1);
         
         // For now, just print to serial
-        Serial.printf("UI Update - ECU Status: Byte0=0x%02X, Byte1=0x%02X\n", 
-                     vehicleData.ecu_byte0, vehicleData.ecu_byte1);
+        Serial.printf("UI Update - ECU Status: Byte0=0x%02X (%d), Byte1=0x%02X (%d)\n", 
+                    vehicleData.ecu_byte0, vehicleData.ecu_byte1);
+
+        Serial.printf("UI Update - BATTERY Stats: Byte0: 0x%02X (%d), Byte1: 0x%02X (%d), Byte2: 0x%02X (%d), Byte3: 0x%02X (%d), Byte4: 0x%02X (%d), Byte5: 0x%02X (%d), Byte6: 0x%02X (%d), Byte7: 0x%02X (%d)\n",
+                    vehicleData.data_0x24[0], vehicleData.data_0x24[0],
+                    vehicleData.data_0x24[1], vehicleData.data_0x24[1],
+                    vehicleData.data_0x24[2], vehicleData.data_0x24[2],
+                    vehicleData.data_0x24[3], vehicleData.data_0x24[3],
+                    vehicleData.data_0x24[4], vehicleData.data_0x24[4],
+                    vehicleData.data_0x24[5], vehicleData.data_0x24[5],
+                    vehicleData.data_0x24[6], vehicleData.data_0x24[6],
+                    vehicleData.data_0x24[7], vehicleData.data_0x24[7]);
+
+        Serial.printf("UI Update - FRONT LEFT Wheel Speed: Byte0=0x%02X (%d), Byte1=0x%02X (%d)\n", 
+                    vehicleData.data_0x34[0], vehicleData.data_0x34[0],
+                    vehicleData.data_0x34[1], vehicleData.data_0x34[1]);
+        
+        Serial.printf("UI Update - FRONT RIGHT Wheel Speed: Byte0=0x%02X (%d), Byte1=0x%02X (%d)\n", 
+                    vehicleData.data_0x35[0], vehicleData.data_0x35[0],
+                    vehicleData.data_0x35[1], vehicleData.data_0x35[1]);
+
+        Serial.printf("UI Update - REAR LEFT Wheel Speed: Byte0=0x%02X (%d), Byte1=0x%02X (%d)\n", 
+                    vehicleData.data_0x36[0], vehicleData.data_0x36[0],
+                    vehicleData.data_0x36[1], vehicleData.data_0x36[1]);
+        
+        Serial.printf("UI Update - REAR RIGHT Wheel Speed: Byte0=0x%02X (%d), Byte1=0x%02X (%d)\n", 
+                    vehicleData.data_0x37[0], vehicleData.data_0x37[0],
+                    vehicleData.data_0x37[1], vehicleData.data_0x37[1]);
+
+        Serial.printf("UI Update - VEHICLE Overall Speed: Byte0=0x%02X (%d), Byte1=0x%02X (%d)\n", 
+                    vehicleData.data_0x38[0], vehicleData.data_0x38[0],
+                    vehicleData.data_0x38[1], vehicleData.data_0x38[1]);
+
     } else {
         // Data is stale or not received
-        Serial.println("UI Update - No fresh ECU data");
+        Serial.println("UI Update - No fresh EVAM data");
     }
     
     lvgl_port_unlock();
@@ -38,7 +69,7 @@ void update_dashboard_ui() {
 
 void setup()
 {
-    String title = "LVGL porting example";
+    String title = "Passenger Dashboard";
 
     Serial.begin(115200);
 

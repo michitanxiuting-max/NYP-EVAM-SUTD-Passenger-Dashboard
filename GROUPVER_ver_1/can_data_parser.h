@@ -6,13 +6,13 @@
 #include "driver/twai.h"
 
 // CAN Message IDs
-#define CAN_ID_ECU_STATUS   0x00000008
-#define CAN_ID_DATA_0x24    0x00000024
-#define CAN_ID_DATA_0x34    0x00000034
-#define CAN_ID_DATA_0x35    0x00000035
-#define CAN_ID_DATA_0x36    0x00000036
-#define CAN_ID_DATA_0x37    0x00000037
-#define CAN_ID_DATA_0x38    0x00000038
+#define CAN_ID_ECU_STATUS       0x00000008
+#define CAN_ID_BATTERY_STATS    0x00000024
+#define CAN_ID_FL_Wheel_Speed   0x00000034
+#define CAN_ID_FR_Wheel_Speed   0x00000035
+#define CAN_ID_RL_Wheel_Speed   0x00000036
+#define CAN_ID_RR_Wheel_Speed   0x00000037
+#define CAN_ID_VEHICLE_Speed    0x00000038
 
 // Vehicle data structure
 typedef struct {

@@ -31,8 +31,6 @@ void can_data_init()
     float wheel_fr_km;
     float wheel_bl_km;
     float wheel_br_km;
-    float car_value = 0.0f;
-    float can_value = 0.0f;
     
     vehicleData.last_update = 0;
 }
@@ -200,11 +198,11 @@ float get_arc_value_from_ecu(uint8_t ecu_byte) {
     float arc_value;
     
     if (ecu_byte == 255) {
-        arc_value = 0.0;  // Offline
+        arc_value = 50.0;  // Offline
         Serial.printf("ECU Status: Offline \n");
     } 
     else if (ecu_byte == 0) {
-        arc_value = 50.0; // Error
+        arc_value = 0.0; // Error
         Serial.printf("ECU Status: Error \n");
     }   
     else if (ecu_byte == 1) {

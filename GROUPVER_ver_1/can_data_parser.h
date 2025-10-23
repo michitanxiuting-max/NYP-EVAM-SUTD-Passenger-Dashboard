@@ -20,6 +20,7 @@ typedef struct {
     uint8_t ecu_byte0;
     uint8_t ecu_byte1;
     bool ecu_valid;
+    float arc_value;
     
     // 0x24 - Battery data
     uint8_t data_0x24[8];

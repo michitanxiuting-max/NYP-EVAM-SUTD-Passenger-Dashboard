@@ -21,29 +21,42 @@ typedef struct {
     uint8_t ecu_byte1;
     bool ecu_valid;
     
-    // 0x24 data
+    // 0x24 - Battery data
     uint8_t data_0x24[8];
     bool data_0x24_valid;
+    float battery_voltage;      
+    float battery_current;      
+    uint8_t highest_cell_temp;  
+    float SOC;
     
-    // 0x34 data
+    // 0x34 - Front Left Wheel
     uint8_t data_0x34[8];
     bool data_0x34_valid;
+    float wheel_fl_rpm;
+    float wheel_fl_km;        
     
-    // 0x35 data
+    // 0x35 - Front Right Wheel
     uint8_t data_0x35[8];
     bool data_0x35_valid;
+    float wheel_fr_rpm; 
+    float wheel_fr_km;          
     
-    // 0x36 data
+    // 0x36 - Rear Left Wheel (Back Left)
     uint8_t data_0x36[8];
     bool data_0x36_valid;
+    float wheel_bl_rpm;    
+    float wheel_bl_km;       
     
-    // 0x37 data
+    // 0x37 - Rear Right Wheel (Back Right)
     uint8_t data_0x37[8];
     bool data_0x37_valid;
+    float wheel_br_rpm; 
+    float wheel_br_km;          
     
-    // 0x38 data
+    // 0x38 - Speed
     uint8_t data_0x38[8];
     bool data_0x38_valid;
+    float speed_kmh;            
     
     unsigned long last_update;
 } VehicleData_t;
@@ -55,6 +68,6 @@ extern VehicleData_t vehicleData;
 void can_data_init();
 void can_data_parse(twai_message_t &message);
 bool can_data_is_fresh(unsigned long timeout_ms);
-int16_t get_arc_value_from_ecu(uint8_t ecu_byte);
+float get_arc_value_from_ecu(uint8_t ecu_byte);
 
 #endif // __CAN_DATA_PARSER_H

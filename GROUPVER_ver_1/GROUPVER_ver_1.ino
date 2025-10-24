@@ -37,6 +37,7 @@ void update_dashboard_ui() {
         if (vehicleData.ecu_valid && can_data_is_fresh(2000)) 
         { 
             float arc_value = get_arc_value_from_ecu(vehicleData.ecu_byte0);
+            
             // Convert float to int16_t for the arc
             int16_t can_value = (int16_t)arc_value;
             int16_t car_value = (int16_t)arc_value;
@@ -45,18 +46,40 @@ void update_dashboard_ui() {
             lv_arc_set_value(ui_can_stats_arc, can_value);
             lv_arc_set_value(ui_car_stats_arc, car_value);
 
-            // Update ECU Labels using buffers
-            sprintf(buffer_ecu, "%.0f%%", arc_value);
+            // Update ECU Labels and Arc Colors based on ecu_byte0 value
+            if (vehicleData.ecu_byte0 == 255) {
+                sprintf(buffer_ecu, "OFFLINE");
+                // OFFLINE - Gray
+                lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
+                lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
+            } 
+            else if (vehicleData.ecu_byte0 == 1) {
+                sprintf(buffer_ecu, "OK");
+                // OK - Green
+                lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0x00FF00), LV_PART_INDICATOR);
+                lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0x00FF00), LV_PART_INDICATOR);
+            } 
+            else if (vehicleData.ecu_byte0 == 0) {
+                sprintf(buffer_ecu, "ERROR");
+                // ERROR - Red
+                lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0xFF0000), LV_PART_INDICATOR);
+                lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0xFF0000), LV_PART_INDICATOR);
+            } 
+            else {
+                sprintf(buffer_ecu, "UNKNOWN");
+                // UNKNOWN - Yellow
+                lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0xFFFF00), LV_PART_INDICATOR);
+                lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0xFFFF00), LV_PART_INDICATOR);
+            }
 
             lv_label_set_text(ui_CAR_TBD, buffer_ecu);
             lv_label_set_text(ui_CAN_TBD, buffer_ecu);
 
             // For printing to serial
-            Serial.printf("UI Update - ECU Status: Byte0=0x%02X (%d), Byte1=0x%02X (%d), Arc: %d\n", 
-                        vehicleData.ecu_byte0, vehicleData.ecu_byte0,                                                                                                                                                                                                                                                 0,
-                        vehicleData.ecu_byte1, vehicleData.ecu_byte1, can_value);
+            Serial.printf("UI Update - ECU Status: Byte0=0x%02X (%d), Byte1=0x%02X (%d), Status: %s\n", 
+                        vehicleData.ecu_byte0, vehicleData.ecu_byte0,
+                        vehicleData.ecu_byte1, vehicleData.ecu_byte1, buffer_ecu);
         }
-
 
         // 2. BATTERY STATS
         if (vehicleData.data_0x24_valid) {

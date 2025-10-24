@@ -198,11 +198,11 @@ float get_arc_value_from_ecu(uint8_t ecu_byte) {
     float arc_value;
     
     if (ecu_byte == 255) {
-        arc_value = 50.0;  // Offline
+        arc_value = 100.0;  // Offline
         Serial.printf("ECU Status: Offline \n");
     } 
     else if (ecu_byte == 0) {
-        arc_value = 0.0; // Error
+        arc_value = 100.0; // Error
         Serial.printf("ECU Status: Error \n");
     }   
     else if (ecu_byte == 1) {
@@ -210,7 +210,7 @@ float get_arc_value_from_ecu(uint8_t ecu_byte) {
         Serial.printf("ECU Status: OK \n");
     } 
     else {
-        arc_value = 0.0; // Default
+        arc_value = 100.0; // Default
     }
     
     return arc_value;

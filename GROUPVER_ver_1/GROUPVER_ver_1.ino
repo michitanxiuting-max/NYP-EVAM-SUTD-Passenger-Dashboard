@@ -267,10 +267,6 @@ void setup()
     lv_obj_clear_flag(ui_br_arc, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(ui_temp_slider, LV_OBJ_FLAG_CLICKABLE);
 
-    // Starting Positions
-    lv_arc_set_value(ui_can_stats_arc, 100); 
-    lv_arc_set_value(ui_car_stats_arc, 100); 
-
     lvgl_port_unlock();
 }
 

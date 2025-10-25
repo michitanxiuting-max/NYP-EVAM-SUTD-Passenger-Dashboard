@@ -192,25 +192,25 @@ void can_data_parse(twai_message_t &message) {
 }
 
 // Check if data is fresh (received recently)
-bool can_data_is_fresh(unsigned long timeout_ms) {
-    if (!vehicleData.ecu_valid) return false;
-    return (millis() - vehicleData.last_update) < timeout_ms;
-    delay(100);
-}
-
 // bool can_data_is_fresh(unsigned long timeout_ms) {
-//     // Check if we have ANY valid data (not just ECU)
-//     bool any_valid = vehicleData.ecu_valid || 
-//                      vehicleData.data_0x24_valid || 
-//                      vehicleData.data_0x34_valid || 
-//                      vehicleData.data_0x35_valid || 
-//                      vehicleData.data_0x36_valid || 
-//                      vehicleData.data_0x37_valid || 
-//                      vehicleData.data_0x38_valid;
-    
-//     if (!any_valid) return false;
+//     if (!vehicleData.ecu_valid) return false;
 //     return (millis() - vehicleData.last_update) < timeout_ms;
+//     delay(100);
 // }
+
+bool can_data_is_fresh(unsigned long timeout_ms) {
+    // Check if we have ANY valid data (not just ECU)
+    bool any_valid = vehicleData.ecu_valid || 
+                     vehicleData.data_0x24_valid || 
+                     vehicleData.data_0x34_valid || 
+                     vehicleData.data_0x35_valid || 
+                     vehicleData.data_0x36_valid || 
+                     vehicleData.data_0x37_valid || 
+                     vehicleData.data_0x38_valid;
+    
+    if (!any_valid) return false;
+    return (millis() - vehicleData.last_update) < timeout_ms;
+}
 
 float get_arc_value_from_ecu(uint8_t ecu_byte) {
     float arc_value;

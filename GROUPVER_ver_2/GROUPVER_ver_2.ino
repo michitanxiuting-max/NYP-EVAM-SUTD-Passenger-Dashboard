@@ -34,7 +34,7 @@ void update_dashboard_ui() {
     // {
     // Update  LVGL labels/widgets here
         // 1. ECU STATUS 
-        if (vehicleData.ecu_valid && can_data_is_fresh(2000)) 
+        if (vehicleData.ecu_valid) // (&& can_data_is_fresh(2000)) 
         { 
             float arc_value = get_arc_value_from_ecu(vehicleData.ecu_byte0);
             

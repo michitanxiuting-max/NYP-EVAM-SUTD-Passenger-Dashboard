@@ -13,13 +13,13 @@ using namespace esp_panel::board;
 #include "can_data_parser.h"  // Include can data reader
 
 static bool driver_installed = false;
-static bool high_temp_alert_was_active = false;
+static bool battery_alert_was_active = false;
 static bool overspeed_alert_was_active = false;
 static bool can_bus_error_was_active = false;
 static bool weather_alert_was_active = false;
 
 // Variables to track CURRENT alert state
-bool high_temp_active = false;
+bool battery_active = false;
 bool overspeed_active = false;
 bool can_bus_error_active = false;
 bool weather_active = false;
@@ -39,7 +39,7 @@ char buffer_overall_speed[16];
 void update_dashboard_ui() {
     lvgl_port_lock(-1);
     
-    high_temp_active = false;
+    battery_active = false;
     overspeed_active = false;
     can_bus_error_active = false;
     weather_active = false;
@@ -147,57 +147,72 @@ void update_dashboard_ui() {
             if (temp_value > 100.0f) temp_value = 100.0f;
             lv_slider_set_value(ui_temp_slider, (int16_t)temp_value, LV_ANIM_ON);
 
-            // Alert for high temperature
-            if (temp_value > 60.0f)
-            {
-                high_temp_alert_was_active = true;
-                high_temp_active = true;  // Currently active
+            // Check ALL battery conditions first
+            bool high_temp = (temp_value > 60.0f);
+            bool overheat = (temp_value > 70.0f);
+            bool low_soc = (vehicleData.SOC < 30.0f);
+            bool high_voltage = (vehicleData.battery_voltage > 100.1f);
+            
+            // If ANY battery alert is active
+            if (high_temp || low_soc || high_voltage) {
+                battery_alert_was_active = true;
+                battery_active = true;
                 
-                // Alert page --> labels opacity 100%
-                lv_obj_set_style_text_opa(ui_high_temp, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-                lv_obj_set_style_text_opa(ui_slow_1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-                
-                if (temp_value > 70.0f)
-                {
-                    lv_obj_set_style_text_opa(ui_overheat, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-                }
-                else
-                {
-                    lv_obj_set_style_text_opa(ui_overheat, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-                }
-
-                // Summary page --> labels opacity 100%
+                // Show battery related label (shared across all battery alerts)
+                lv_obj_set_style_text_opa(ui_battery_related, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
                 lv_obj_set_style_text_opa(ui_batt_fault, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-                
-                // Hide resolved message while alert is active
                 lv_obj_set_style_text_opa(ui_resolved_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-            }
-            else // temp_value <= 60.0f
-            {
-                // Hide warnings
-                lv_obj_set_style_text_opa(ui_high_temp, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                
+                // High temperature alerts
+                if (overheat) {
+                    lv_obj_set_style_text_opa(ui_overheat, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_text_opa(ui_slow_1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                } else {
+                    lv_obj_set_style_text_opa(ui_overheat, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_text_opa(ui_slow_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                }
+                
+                // Low SOC alert
+                if (low_soc) {
+                    lv_obj_set_style_text_opa(ui_low_batt, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_text_opa(ui_charge, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                } else {
+                    lv_obj_set_style_text_opa(ui_low_batt, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_text_opa(ui_charge, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                }
+                
+                // High voltage alert
+                if (high_voltage) {
+                    lv_obj_set_style_text_opa(ui_high_v, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_text_opa(ui_emergency_stop, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                } else {
+                    lv_obj_set_style_text_opa(ui_high_v, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_text_opa(ui_emergency_stop, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                }
+                
+            } else {
+                // NO battery alerts active - hide everything
+                lv_obj_set_style_text_opa(ui_battery_related, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                 lv_obj_set_style_text_opa(ui_overheat, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                 lv_obj_set_style_text_opa(ui_slow_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-                // Hide fault
+                lv_obj_set_style_text_opa(ui_low_batt, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_text_opa(ui_charge, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_text_opa(ui_high_v, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_text_opa(ui_emergency_stop, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                 lv_obj_set_style_text_opa(ui_batt_fault, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                 
-                // Only show "resolved" if there was previously an alert
-                if (high_temp_alert_was_active)
-                {
+                // Show resolved if there was a previous alert
+                if (battery_alert_was_active) {
                     lv_obj_set_style_text_opa(ui_resolved_1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_obj_set_style_text_opa(ui_batt_fault, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-                }
-                else
-                {
+                } else {
                     lv_obj_set_style_text_opa(ui_resolved_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_obj_set_style_text_opa(ui_batt_fault, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                 }
             }
             
             Serial.printf("UI Update - Battery: %.1fV, %.1fA, %d°C, %.1f%%\n",
-                         vehicleData.battery_voltage, vehicleData.battery_current, 
-                         vehicleData.highest_cell_temp, vehicleData.SOC);
+                        vehicleData.battery_voltage, vehicleData.battery_current, 
+                        vehicleData.highest_cell_temp, vehicleData.SOC);
 
             Serial.printf("UI Update - BATTERY Stats: Byte0: 0x%02X (%d), Byte1: 0x%02X (%d), Byte2: 0x%02X (%d), Byte3: 0x%02X (%d), Byte4: 0x%02X (%d), Byte5: 0x%02X (%d), Byte6: 0x%02X (%d), Byte7: 0x%02X (%d)\n",
                         vehicleData.data_0x24[0], vehicleData.data_0x24[0],
@@ -342,7 +357,7 @@ void update_dashboard_ui() {
         }
 
         // CRITICAL: Update alert buttons based on ANY active alert
-        if (high_temp_active || overspeed_active || can_bus_error_active || weather_active)
+        if (battery_active || overspeed_active || can_bus_error_active || weather_active)
         {
             // At least one alert is active - show red buttons
             lv_obj_set_style_bg_opa(ui_alert_red, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -441,9 +456,13 @@ void setup()
     lv_obj_set_style_bg_opa(ui_alert_red5, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Opacity for alerts return to 0
-    lv_obj_set_style_text_opa(ui_high_temp, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_battery_related, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_overheat, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_low_batt, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_high_v, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_slow_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_charge, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_emergency_stop, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_overspeed, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_max_speed, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_slow_2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);

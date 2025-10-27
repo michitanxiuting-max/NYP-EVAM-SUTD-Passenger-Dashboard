@@ -15,10 +15,14 @@ using namespace esp_panel::board;
 static bool driver_installed = false;
 static bool high_temp_alert_was_active = false;
 static bool overspeed_alert_was_active = false;
+static bool can_bus_error_was_active = false;
+static bool weather_alert_was_active = false;
 
 // Variables to track CURRENT alert state
 bool high_temp_active = false;
 bool overspeed_active = false;
+bool can_bus_error_active = false;
+bool weather_active = false;
 
 // Buffers for text conversion
 char buffer_ecu[16];
@@ -37,6 +41,8 @@ void update_dashboard_ui() {
     
     high_temp_active = false;
     overspeed_active = false;
+    can_bus_error_active = false;
+    weather_active = false;
     
     // Check if data is fresh (within last 2 seconds)
     // if (can_data_is_fresh(2000)) 
@@ -55,6 +61,10 @@ void update_dashboard_ui() {
             lv_arc_set_value(ui_can_stats_arc, can_value);
             lv_arc_set_value(ui_car_stats_arc, car_value);
 
+            // Alert page --> labels opacity 0%
+                lv_obj_set_style_text_opa(ui_canbus_error, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_text_opa(ui_wait_for, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
             // Update ECU Labels and Arc Colors based on ecu_byte0 value
             if (vehicleData.ecu_byte0 == 255) {
                 sprintf(buffer_ecu, "OFFLINE");
@@ -62,6 +72,15 @@ void update_dashboard_ui() {
                 lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
                 lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
                 
+                // Alert for ecu error
+                can_bus_error_was_active = true;
+                can_bus_error_active = true;  // Currently active
+
+                // Alert page --> labels opacity 100%
+                lv_obj_set_style_text_opa(ui_canbus_error, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_text_opa(ui_wait_for, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+
             } 
             else if (vehicleData.ecu_byte0 == 1) {
                 sprintf(buffer_ecu, "OK");
@@ -75,9 +94,14 @@ void update_dashboard_ui() {
                 // ERROR - Red
                 lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0xFF0000), LV_PART_INDICATOR);
                 lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0xFF0000), LV_PART_INDICATOR);
-                // show up on alert page
-                // lv_obj_set_style_text_opa(ui_canbus_error, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-                // lv_obj_set_style_text_opa(ui_wait_for, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+                // Alert for ecu error
+                can_bus_error_was_active = true;
+                can_bus_error_active = true;  // Currently active
+
+                // Alert page --> labels opacity 100%
+                lv_obj_set_style_text_opa(ui_canbus_error, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_text_opa(ui_wait_for, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
             } 
             else {
@@ -85,13 +109,18 @@ void update_dashboard_ui() {
                 // UNKNOWN - Yellow
                 lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0xFFFF00), LV_PART_INDICATOR);
                 lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0xFFFF00), LV_PART_INDICATOR);
-
+                // Alert for ecu error
+                can_bus_error_was_active = true;
+                can_bus_error_active = true;  // Currently active
+                
+                // Alert page --> labels opacity 100%
+                lv_obj_set_style_text_opa(ui_canbus_error, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_text_opa(ui_wait_for, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
             }
 
             lv_label_set_text(ui_CAR_TBD, buffer_ecu);
             lv_label_set_text(ui_CAN_TBD, buffer_ecu);
             
-
             // For printing to serial
             Serial.printf("UI Update - ECU Status: Byte0=0x%02X (%d), Byte1=0x%02X (%d), Status: %s\n", 
                         vehicleData.ecu_byte0, vehicleData.ecu_byte0,
@@ -107,12 +136,10 @@ void update_dashboard_ui() {
             sprintf(buffer_batt_percent, "%.0f%%", vehicleData.SOC);
             sprintf(buffer_batt_volts, "%.1fV", vehicleData.battery_voltage);
             sprintf(buffer_batt_temp, "%d°C", vehicleData.highest_cell_temp);
-
             
             lv_label_set_text(ui_batt_percent, buffer_batt_percent);
             lv_label_set_text(ui_batt_volts, buffer_batt_volts);
             lv_label_set_text(ui_batt_temp, buffer_batt_temp);
-
 
             // Map temperature to slider (0-100 range)
             float temp_value = (float)vehicleData.highest_cell_temp;
@@ -315,7 +342,7 @@ void update_dashboard_ui() {
         }
 
         // CRITICAL: Update alert buttons based on ANY active alert
-        if (high_temp_active || overspeed_active)
+        if (high_temp_active || overspeed_active || can_bus_error_active || weather_active)
         {
             // At least one alert is active - show red buttons
             lv_obj_set_style_bg_opa(ui_alert_red, 255, LV_PART_MAIN | LV_STATE_DEFAULT);

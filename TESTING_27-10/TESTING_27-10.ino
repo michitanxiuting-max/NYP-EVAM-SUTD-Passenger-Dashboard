@@ -6,6 +6,10 @@
 
 #include "lvgl_v8_port.h"
 
+#include <WiFi.h>
+const char* ssid = "Michi's iPhone (2)";
+const char* password = "itsMichi15";
+
 using namespace esp_panel::drivers;
 using namespace esp_panel::board;
 
@@ -34,6 +38,20 @@ char buffer_fr_speed[16];
 char buffer_bl_speed[16];
 char buffer_br_speed[16];
 char buffer_overall_speed[16];
+
+// Wifi Function
+void wifi_setup()
+{
+    delay(100);
+    printf("Connecting to WiFi...");
+    WiFi.begin(ssid, password);
+    while (WiFi.status()!= WL_CONNECTED)
+    {
+        delay(100);
+        printf(".");
+    }
+    printf("\nWiFi connected");
+}
 
 // Add UI update function
 void update_dashboard_ui() {
@@ -395,6 +413,9 @@ void setup()
 
     driver_installed = waveshare_twai_init();
 
+    wifi_setup();
+    printf("Connected WiFi SSID: %s\n", WiFi.SSID().c_str());
+
     Serial.println("Initializing board");
     Board *board = new Board();
     board->init();
@@ -482,7 +503,7 @@ void setup()
 }
 
 void loop()
-{
+{   
     if (!driver_installed) 
     {
         delay(1000);

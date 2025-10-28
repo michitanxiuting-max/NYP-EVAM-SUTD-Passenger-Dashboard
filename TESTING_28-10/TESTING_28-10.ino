@@ -10,9 +10,10 @@
 const char* ssid = "Michi's iPhone (2)";
 const char* password = "itsMichi15";
 
-#include <HTTPClient.h> // for weather radar testing
+#include <HTTPClient.h>
 #include <ArduinoJson.h>
 
+// Weather variables
 unsigned long last_weather_update = 0;
 String weather_condition = "Loading...";
 float weather_temp = 0.0;
@@ -20,7 +21,8 @@ bool weather_heavy_rain = false;
 
 // OpenWeatherMap API (at openweathermap.org)
 const char* weather_api_key = "9db52acc79376ec336f7e7b4779c9e1c";
-const char* city = "Singapore";  // Your race track location
+const float singapore_lat = 1.3521;  // Singapore coordinates
+const float singapore_lon = 103.8198;
 
 using namespace esp_panel::drivers;
 using namespace esp_panel::board;
@@ -51,7 +53,74 @@ char buffer_bl_speed[16];
 char buffer_br_speed[16];
 char buffer_overall_speed[16];
 
-// Function to fetch weather data
+// Weather Related
+void update_weather_label(String condition) 
+{
+    // Convert weather condition to simple label text
+    if (condition == "Clear" || condition == "Sunny") 
+    {
+        lv_label_set_text(ui_WEATHER_LABEL, "SUNNY");
+        lv_label_set_text(ui_WEATHER_TBD, "SUNNY");
+    }
+    else if (condition == "Clouds" || condition == "Haze") 
+    {
+        lv_label_set_text(ui_WEATHER_LABEL, "CLOUDY");
+        lv_label_set_text(ui_WEATHER_TBD, "CLOUDY");
+    }
+    else if (condition == "Rain" || condition == "Drizzle") 
+    {
+        lv_label_set_text(ui_WEATHER_LABEL, "RAINY");
+        lv_label_set_text(ui_WEATHER_TBD, "RAINY");
+    }
+    else if (condition == "Thunderstorm") 
+    {
+        lv_label_set_text(ui_WEATHER_LABEL, "STORMY");
+        lv_label_set_text(ui_WEATHER_TBD, "STORMY");
+    }
+    else 
+    {
+        lv_label_set_text(ui_WEATHER_LABEL, condition.c_str());
+        lv_label_set_text(ui_WEATHER_TBD, condition.c_str());
+    }
+}
+
+// Function to fetch weather radar image (Singapore Meteorological Service)
+void update_weather_radar() {
+    if (WiFi.status() != WL_CONNECTED) return;
+    
+    // Singapore has free weather radar from NEA (National Environment Agency)
+    // URL: https://www.weather.gov.sg/files/rainarea/50km/v2/dpsri_70km_2025010612300000dBR.dpsri.png
+    // They update every 5 minutes
+    
+    HTTPClient http;
+    
+    // Singapore NEA weather radar (free, no API key needed!)
+    String radar_url = "https://www.weather.gov.sg/files/rainarea/50km/v2/latest.png";
+    
+    http.begin(radar_url);
+    int httpCode = http.GET();
+    
+    if (httpCode == 200) {
+        // Get image data
+        WiFiClient* stream = http.getStreamPtr();
+        
+        // Option 1: Save to SPIFFS/SD and load into LVGL
+        // (You'd need to implement file saving here)
+        
+        // Option 2: Update a label to show "Updated"
+        Serial.println("Weather radar image fetched successfully!");
+        
+        // For now, just indicate it's updated
+        // You'll need to decode the PNG and display it on ui_weatherradar
+        
+    } else {
+        Serial.printf("Weather radar fetch failed: %d\n", httpCode);
+    }
+    
+    http.end();
+}
+
+// Function to fetch weather data and condition
 void update_weather() 
 {
     if (WiFi.status() != WL_CONNECTED) return;
@@ -59,13 +128,17 @@ void update_weather()
     if (millis() - last_weather_update < 300000) return; // Update every 5 minutes
     
     HTTPClient http;
-    String url = "http://api.openweathermap.org/data/2.5/weather?q=" + String(city) + 
+    
+    // OpenWeatherMap for current conditions
+    String url = "http://api.openweathermap.org/data/2.5/weather?lat=" + 
+                 String(singapore_lat, 6) + "&lon=" + String(singapore_lon, 6) +
                  "&appid=" + String(weather_api_key) + "&units=metric";
     
     http.begin(url);
     int httpCode = http.GET();
     
-    if (httpCode == 200) {
+    if (httpCode == 200) 
+    {
         String payload = http.getString();
         
         // Parse JSON
@@ -74,6 +147,9 @@ void update_weather()
         
         weather_condition = doc["weather"][0]["main"].as<String>();
         weather_temp = doc["main"]["temp"];
+        
+        // Update the weather label
+        update_weather_label(weather_condition);
         
         // Check for heavy rain alert
         if (weather_condition == "Rain" || weather_condition == "Thunderstorm") {
@@ -86,58 +162,73 @@ void update_weather()
         }
         
         Serial.printf("Weather: %s, Temp: %.1f°C\n", weather_condition.c_str(), weather_temp);
+        
+        // Also fetch radar image
+        update_weather_radar();
+        
         last_weather_update = millis();
+    } 
+    else 
+    {
+        Serial.printf("Weather API failed: %d\n", httpCode);
     }
-    
     http.end();
 }
 
-// Add this temporary test function
-void test_weather_simulation() {
+// Test function with cycling weather
+void test_weather_simulation() 
+{
     static unsigned long last_sim = 0;
     
-    if (millis() - last_sim < 10000) return; // Simulate update every 10 seconds
+    if (millis() - last_sim < 10000) return; // Every 10 seconds
     
-    // Simulate different weather conditions
     static int weather_cycle = 0;
     
-    switch(weather_cycle) {
+    switch(weather_cycle) 
+    {
         case 0:
             weather_condition = "Clear";
-            weather_temp = 28.5;
+            weather_temp = 32.0;
             weather_heavy_rain = false;
-            Serial.println("SIM: Clear weather");
+            update_weather_label("Sunny");
+            Serial.println("SIM: Sunny weather");
             break;
         case 1:
+            weather_condition = "Clouds";
+            weather_temp = 28.0;
+            weather_heavy_rain = false;
+            update_weather_label("Clouds");
+            Serial.println("SIM: Cloudy");
+            break;
+        case 2:
             weather_condition = "Rain";
             weather_temp = 24.0;
             weather_heavy_rain = true;
-            Serial.println("SIM: Heavy rain!");
+            update_weather_label("Rain");
+            Serial.println("SIM: Rainy!");
             break;
-        case 2:
+        case 3:
             weather_condition = "Thunderstorm";
             weather_temp = 22.0;
             weather_heavy_rain = true;
+            update_weather_label("Thunderstorm");
             Serial.println("SIM: Thunderstorm!");
-            break;
-        case 3:
-            weather_condition = "Clouds";
-            weather_temp = 26.0;
-            weather_heavy_rain = false;
-            Serial.println("SIM: Cloudy");
             break;
     }
     
-    weather_cycle = (weather_cycle + 1) % 4; // Loop through conditions
+    weather_cycle = (weather_cycle + 1) % 4;
     
-    // Update flags for alert system
-    if (weather_heavy_rain) {
+    if (weather_heavy_rain) 
+    {
         weather_alert_was_active = true;
         weather_active = true;
-    } else {
+    } 
+    else 
+    {
         weather_active = false;
     }
     
+    update_weather_radar();
     last_sim = millis();
 }
 
@@ -485,10 +576,6 @@ void update_dashboard_ui() {
             // Alert page --> labels opacity 100%
             lv_obj_set_style_text_opa(ui_heavy_rain_alert, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_opa(ui_return_home, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-            
-            // Update weather label if have
-            // lv_label_set_text_fmt(ui_weather_label, "%s\n%.1f°C", weather_condition.c_str(), weather_temp);
-            
         } 
         else  
         {

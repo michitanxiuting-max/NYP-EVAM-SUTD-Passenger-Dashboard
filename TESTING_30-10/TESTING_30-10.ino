@@ -46,6 +46,12 @@ unsigned long lastWeatherSim = 0;
 unsigned long lastSerialPrint = 0;
 unsigned long lastMapUpdate = 0;
 
+// Data timeout tracking (ms)
+#define DATA_TIMEOUT_MS 2000  // 2 seconds without data = offline
+unsigned long lastCANDataTime = 0;
+bool dataConnected = false;
+static bool need_ui_update = false;  // Force UI refresh on disconnect
+
 // ===== VEHICLE DATA =====
 float SOC = 0.0;
 float battery_voltage = 0.0;
@@ -389,11 +395,69 @@ void update_weather_DataOnly()  // Data update only - NO LVGL calls
 }
 
 // ===== CAN DATA FUNCTIONS =====
+// void processCANData() 
+// {
+//   if (!driver_installed) return;
+
+//   waveshare_twai_receive();
+
+//   if (vehicleData.ecu_valid)
+//   {
+//     ecu_byte0 = vehicleData.ecu_byte0;
+//     ecu_byte1 = vehicleData.ecu_byte1;
+//     if (ecu_byte0 == 255) ecu_status = "OFFLINE";
+//     else if (ecu_byte0 == 1) ecu_status = "OK";
+//     else if (ecu_byte0 == 0) ecu_status = "ERROR";
+//     else ecu_status = "UNKNOWN";
+//   }
+
+//   if (vehicleData.data_0x24_valid)
+//   {
+//     SOC = vehicleData.SOC;
+//     battery_voltage = vehicleData.battery_voltage;
+//     highest_cell_temp = vehicleData.highest_cell_temp;
+//     battery_current = vehicleData.battery_current;
+//   }
+
+//   if (vehicleData.data_0x34_valid)
+//   {
+//     wheel_fl_rpm = vehicleData.wheel_fl_rpm;
+//     wheel_fl_km = vehicleData.wheel_fl_km;
+//   }
+
+//   if (vehicleData.data_0x35_valid)
+//   {
+//     wheel_fr_rpm = vehicleData.wheel_fr_rpm;
+//     wheel_fr_km = vehicleData.wheel_fr_km;
+//   }
+
+//   if (vehicleData.data_0x36_valid)
+//   {
+//     wheel_bl_rpm = vehicleData.wheel_bl_rpm;
+//     wheel_bl_km = vehicleData.wheel_bl_km;
+//   }
+
+//   if (vehicleData.data_0x37_valid)
+//   {
+//     wheel_br_rpm = vehicleData.wheel_br_rpm;
+//     wheel_br_km = vehicleData.wheel_br_km;
+//   }
+
+//   if (vehicleData.data_0x38_valid)
+//   {
+//     speed_kmh = vehicleData.speed_kmh;
+//   }
+// }
+
+// ===== REPLACE YOUR processCANData() WITH THIS =====
 void processCANData() 
 {
   if (!driver_installed) return;
 
   waveshare_twai_receive();
+  
+  // Track if we received any valid data
+  bool receivedAnyData = false;
 
   if (vehicleData.ecu_valid)
   {
@@ -403,6 +467,7 @@ void processCANData()
     else if (ecu_byte0 == 1) ecu_status = "OK";
     else if (ecu_byte0 == 0) ecu_status = "ERROR";
     else ecu_status = "UNKNOWN";
+    receivedAnyData = true;
   }
 
   if (vehicleData.data_0x24_valid)
@@ -411,37 +476,142 @@ void processCANData()
     battery_voltage = vehicleData.battery_voltage;
     highest_cell_temp = vehicleData.highest_cell_temp;
     battery_current = vehicleData.battery_current;
+    receivedAnyData = true;
   }
 
   if (vehicleData.data_0x34_valid)
   {
     wheel_fl_rpm = vehicleData.wheel_fl_rpm;
     wheel_fl_km = vehicleData.wheel_fl_km;
+    receivedAnyData = true;
   }
 
   if (vehicleData.data_0x35_valid)
   {
     wheel_fr_rpm = vehicleData.wheel_fr_rpm;
     wheel_fr_km = vehicleData.wheel_fr_km;
+    receivedAnyData = true;
   }
 
   if (vehicleData.data_0x36_valid)
   {
     wheel_bl_rpm = vehicleData.wheel_bl_rpm;
     wheel_bl_km = vehicleData.wheel_bl_km;
+    receivedAnyData = true;
   }
 
   if (vehicleData.data_0x37_valid)
   {
     wheel_br_rpm = vehicleData.wheel_br_rpm;
     wheel_br_km = vehicleData.wheel_br_km;
+    receivedAnyData = true;
   }
 
   if (vehicleData.data_0x38_valid)
   {
     speed_kmh = vehicleData.speed_kmh;
+    receivedAnyData = true;
+  }
+
+  // Update connection status
+  if (receivedAnyData) 
+  {
+    lastCANDataTime = millis();
+    if (!dataConnected) 
+    {
+      dataConnected = true;
+      need_ui_update = true;  // Force full UI refresh on reconnect
+      Serial.println(">>> DATA CONNECTED <<<");
+    }
+  } 
+  else 
+  {
+    // Check if we've timed out
+    if (dataConnected && (millis() - lastCANDataTime > DATA_TIMEOUT_MS)) 
+    {
+      dataConnected = false;
+      need_ui_update = true;  // Force full UI refresh on disconnect
+      Serial.println(">>> DATA OFFLINE - TIMEOUT <<<");
+    }
   }
 }
+
+// ===== ADD THIS NEW FUNCTION TO RESET DISPLAY =====
+void resetUIToOffline_NoLock()
+{
+  // Reset all data values
+  SOC = 0.0;
+  battery_voltage = 0.0;
+  highest_cell_temp = 0;
+  battery_current = 0.0;
+  speed_kmh = 0.0;
+  wheel_fl_rpm = 0.0;
+  wheel_fl_km = 0.0;
+  wheel_fr_rpm = 0.0;
+  wheel_fr_km = 0.0;
+  wheel_bl_rpm = 0.0;
+  wheel_bl_km = 0.0;
+  wheel_br_rpm = 0.0;
+  wheel_br_km = 0.0;
+  ecu_status = "OFFLINE";
+
+  // Reset all alerts
+  battery_alert_active = false;
+  speed_alert_active = false;
+  can_error_alert_active = true;  // Show as error when offline
+  weather_alert_active = false;
+
+  // Show OFFLINE status everywhere
+  lv_label_set_text(ui_CAR_TBD, "OFFLINE");
+  lv_label_set_text(ui_CAN_TBD, "OFFLINE");
+  
+  // Reset arcs to 0
+  lv_arc_set_value(ui_can_stats_arc, 0);
+  lv_arc_set_value(ui_car_stats_arc, 0);
+  lv_arc_set_value(ui_batt_arc, 0);
+  lv_arc_set_value(ui_fl_arc, 0);
+  lv_arc_set_value(ui_fr_arc, 0);
+  lv_arc_set_value(ui_bl_arc, 0);
+  lv_arc_set_value(ui_br_arc, 0);
+
+  // Set arc color to gray (offline)
+  lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
+  lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
+
+  // Reset all text displays
+  lv_label_set_text(ui_batt_percent, "0%");
+  lv_label_set_text(ui_batt_volts, "0.0V");
+  lv_label_set_text(ui_batt_temp, "0°C");
+  lv_label_set_text(ui_OverallSpeed, "0 km/h");
+  lv_label_set_text(ui_fl_speed, "0");
+  lv_label_set_text(ui_fr_speed, "0");
+  lv_label_set_text(ui_bl_speed, "0");
+  lv_label_set_text(ui_br_speed, "0");
+
+  // Reset temp slider
+  lv_slider_set_value(ui_temp_slider, 0, LV_ANIM_OFF);
+
+  // Reset all alert text opacity
+  lv_obj_set_style_text_opa(ui_canbus_error, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_wait_for, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_battery_related, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_overheat, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_low_batt, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_high_v, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_slow_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_charge, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_emergency_stop, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_overspeed, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_max_speed, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_slow_2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_batt_fault, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_resolved_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_heavy_rain_alert, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_return_home, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_speed_fault, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_opa(ui_resolved_2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+}
+
 
 // ===== UI UPDATE FUNCTION (NO LOCK - called inside lock) =====
 void updateUI_NoLock() 
@@ -764,9 +934,9 @@ void loop()
   processCANData();
 
   // 2. Update weather data only - no LVGL calls
-  // testWeatherSimulation_DataOnly();
+  testWeatherSimulation_DataOnly();
   // OR use real API
-  update_weather_DataOnly();
+  // update_weather_DataOnly();
 
   // Print every 500ms instead of every update
   if (millis() - lastSerialPrint >= 500)
@@ -776,23 +946,59 @@ void loop()
     lastSerialPrint = millis();
   }
 
+  // Print every 1000ms - SIMPLE DEBUG
+  if (millis() - lastSerialPrint >= 100)
+  {
+    Serial.print("CONNECTED: ");
+    Serial.print(dataConnected ? "YES" : "NO");
+    Serial.print(" | SPEED: ");
+    Serial.print(speed_kmh);
+    Serial.print(" | SOC: ");
+    Serial.print(SOC);
+    Serial.print(" | TEMP: ");
+    Serial.println(highest_cell_temp);
+    lastSerialPrint = millis();
+  }
+
   // if (millis() - lastUpdate > UPDATE_INTERVAL_MS) {
   //       update_location_and_move_icon();
   //       lastUpdate = millis();
   // }
 
-  // 3. ONE BIG LOCK - all LVGL updates happen here every 100ms
-  if (millis() - lastUIUpdate >= 50)
+  // 3. ONE BIG LOCK - all LVGL updates happen here every 30ms
+  if (millis() - lastUIUpdate >= 30)
   {
     lvgl_port_lock(-1);  // ONE lock for everything
     
-    // Update weather display
-    updateWeatherLabel_NoLock(weather_condition);
-    update_temp_label_NoLock(weather_temp);
-    updateWeatherOverlay_NoLock();
+    // // Update weather display
+    // updateWeatherLabel_NoLock(weather_condition);
+    // update_temp_label_NoLock(weather_temp);
+    // updateWeatherOverlay_NoLock();
     
-    // Update all UI elements
-    updateUI_NoLock();
+    // // Update all UI elements
+    // updateUI_NoLock();
+
+    // If data connection changed, do a full reset or normal update
+    if (need_ui_update) 
+    {
+      if (!dataConnected) 
+      {
+        resetUIToOffline_NoLock();
+      }
+      need_ui_update = false;
+    }
+
+    // Only update if we have data connection
+    if (dataConnected) 
+    {
+      // Update weather display
+      updateWeatherLabel_NoLock(weather_condition);
+      update_temp_label_NoLock(weather_temp);
+      updateWeatherOverlay_NoLock();
+      
+      // Update all UI elements with live data
+      updateUI_NoLock();
+    }
     
     lvgl_port_unlock();  // ONE unlock
     lastUIUpdate = millis();

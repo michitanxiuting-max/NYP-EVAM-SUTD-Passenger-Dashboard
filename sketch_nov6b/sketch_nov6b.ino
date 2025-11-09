@@ -116,6 +116,10 @@ char buffer_br_speed[16];
 char buffer_ecu[16];
 char buffer_temp_percent[16];
 
+// Add these variables near the top with other state tracking
+static bool last_alert_state = false;  // Track previous alert state
+static lv_disp_draw_buf_t* last_page = NULL;  // Track current page
+
 using namespace esp_panel::drivers;
 using namespace esp_panel::board;
 
@@ -1019,6 +1023,19 @@ void updateUI_NoLock() {
   }
 }
 
+// Function to check if any alert is active
+bool isAnyAlertActive() 
+{
+  return battery_alert_active || speed_alert_active || can_error_alert_active || weather_alert_active;
+}
+
+// Function to switch to alert page (Screen3)
+void switchToAlertPage_Lock() 
+{
+  lv_disp_load_scr(ui_Screen3);
+  Serial.println(">>> SWITCHED TO ALERT PAGE (Screen3) <<<");
+}
+
 void setup() {
   Serial.begin(115200);
   driver_installed = waveshare_twai_init();
@@ -1154,7 +1171,7 @@ void loop()
     lastSerialPrint = millis();
   }
 
-  // 3. ONE BIG LOCK - all LVGL updates happen here every 30ms
+  // MAIN LVGL UPDATE BLOCK WITH ALERT DETECTION
   if (millis() - lastUIUpdate >= 30)
   {
     lvgl_port_lock(-1);
@@ -1176,6 +1193,18 @@ void loop()
       update_entertainment_page_NoLock();
       updateUI_NoLock();
     }
+
+    // ===== ALERT PAGE AUTO-SWITCH LOGIC =====
+    bool current_alert_state = isAnyAlertActive();
+    
+    // If alert just became active, switch to alert page immediately
+    if (current_alert_state && !last_alert_state) {
+      switchToAlertPage_Lock();
+      Serial.println("!!! ALERT TRIGGERED - SWITCHING TO ALERT PAGE !!!");
+    }
+    
+    last_alert_state = current_alert_state;
+    // ===== END ALERT LOGIC =====
     
     lvgl_port_unlock();
     lastUIUpdate = millis();

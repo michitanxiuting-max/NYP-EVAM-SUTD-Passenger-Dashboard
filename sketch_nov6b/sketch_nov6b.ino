@@ -867,29 +867,37 @@ void resetUIToOffline_NoLock()
   lv_obj_set_style_text_opa(ui_resolved_2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
-void updateUI_NoLock() {
-  if (ecu_byte0 == 255) {
+void updateUI_NoLock() 
+{
+  if (ecu_byte0 == 255) 
+  {
     sprintf(buffer_ecu, "OFFLINE");
     lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0x808080), LV_PART_INDICATOR);
     can_error_alert_active = true;
     lv_obj_set_style_text_opa(ui_canbus_error, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_wait_for, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-  } else if (ecu_byte0 == 1) {
+  } 
+  else if (ecu_byte0 == 1) 
+  {
     sprintf(buffer_ecu, "OK");
     lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0x00FF00), LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0x00FF00), LV_PART_INDICATOR);
     can_error_alert_active = false;
     lv_obj_set_style_text_opa(ui_canbus_error, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_wait_for, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-  } else if (ecu_byte0 == 0) {
+  } 
+  else if (ecu_byte0 == 0) 
+  {
     sprintf(buffer_ecu, "ERROR");
     lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0xFF0000), LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0xFF0000), LV_PART_INDICATOR);
     can_error_alert_active = true;
     lv_obj_set_style_text_opa(ui_canbus_error, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_wait_for, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-  } else {
+  } 
+  else 
+  {
     sprintf(buffer_ecu, "UNKNOWN");
     lv_obj_set_style_arc_color(ui_can_stats_arc, lv_color_hex(0xFFFF00), LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(ui_car_stats_arc, lv_color_hex(0xFFFF00), LV_PART_INDICATOR);
@@ -918,33 +926,44 @@ void updateUI_NoLock() {
   bool low_soc = (SOC < 30.0f);
   bool high_voltage = (battery_voltage > 100.1f);
   
-  if (high_temp || low_soc || high_voltage) {
+  if (high_temp || low_soc || high_voltage) 
+  {
     battery_alert_active = true;
     lv_obj_set_style_text_opa(ui_battery_related, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_batt_fault, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_resolved_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    if (overheat) {
+    if (overheat) 
+    {
       lv_obj_set_style_text_opa(ui_overheat, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_opa(ui_slow_1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    } else {
+    } 
+    else 
+    {
       lv_obj_set_style_text_opa(ui_overheat, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_opa(ui_slow_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     }
     if (low_soc) {
       lv_obj_set_style_text_opa(ui_low_batt, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_opa(ui_charge, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    } else {
+    } 
+    else 
+    {
       lv_obj_set_style_text_opa(ui_low_batt, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_opa(ui_charge, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     }
-    if (high_voltage) {
+    if (high_voltage) 
+    {
       lv_obj_set_style_text_opa(ui_high_v, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_opa(ui_emergency_stop, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    } else {
+    } 
+    else 
+    {
       lv_obj_set_style_text_opa(ui_high_v, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_opa(ui_emergency_stop, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     }
-  } else {
+  } 
+  else 
+  {
     battery_alert_active = false;
     lv_obj_set_style_text_opa(ui_battery_related, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_overheat, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -984,7 +1003,8 @@ void updateUI_NoLock() {
   sprintf(buffer_overall_speed, "%.0f km/h", speed_kmh);
   lv_label_set_text(ui_OverallSpeed, buffer_overall_speed);
 
-  if (speed_kmh >= 200.0f) {
+  if (speed_kmh >= 200.0f) 
+  {
     speed_alert_active = true;
     lv_obj_set_style_text_opa(ui_overspeed, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_slow_2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -994,7 +1014,9 @@ void updateUI_NoLock() {
       lv_obj_set_style_text_opa(ui_max_speed, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     else
       lv_obj_set_style_text_opa(ui_max_speed, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-  } else {
+  } 
+  else 
+  {
     speed_alert_active = false;
     lv_obj_set_style_text_opa(ui_overspeed, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_max_speed, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1025,14 +1047,17 @@ void updateUI_NoLock() {
   }
 
   bool anyAlertActive = battery_alert_active || speed_alert_active || can_error_alert_active || weather_alert_active;
-  if (anyAlertActive) {
+  if (anyAlertActive) 
+  {
     lv_obj_set_style_bg_opa(ui_alert_red, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red3, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red4, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red6, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-  } else {
+  } 
+  else 
+  {
     lv_obj_set_style_bg_opa(ui_alert_red, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red3, 0, LV_PART_MAIN | LV_STATE_DEFAULT);

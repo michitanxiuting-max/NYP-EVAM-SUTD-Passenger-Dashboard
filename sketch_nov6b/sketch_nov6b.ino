@@ -1053,7 +1053,7 @@ void dismissWeatherAlert()
 // Function to check if any alert is active
 bool isAnyAlertActive() 
 {
-  return battery_alert_active || speed_alert_active || can_error_alert_active || weather_alert_active;
+  return battery_alert_active || speed_alert_active || can_error_alert_active || weather_alert_active || weather_alert_triggered;
 }
 
 // Function to switch to alert page (Screen3)

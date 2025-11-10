@@ -96,6 +96,9 @@ float weather_temp = 0.0;
 bool weather_heavy_rain = false;
 bool weather_heavy_snow = false;
 bool weather_black_ice = false;
+static bool weather_alert_triggered = false;  // Persistent flag
+static String alert_message = "";
+static String alert_header = "";
 
 // ===== STATE TRACKING =====
 static bool driver_installed = false;
@@ -411,6 +414,7 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_rain = false;
       weather_heavy_snow = false;
       weather_black_ice = false;
+      weather_alert_triggered = false;
       Serial.println("SIM: Sunny - 32°C");
       break;
     case 1:
@@ -419,6 +423,7 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_rain = false;
       weather_heavy_snow = false;
       weather_black_ice = false;
+      weather_alert_triggered = false;
       Serial.println("SIM: Cloudy - 28°C");
       break;
     case 2:
@@ -427,6 +432,10 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_rain = true;
       weather_heavy_snow = false;
       weather_black_ice = false;
+      weather_alert_triggered = true;
+      alert_message = "Return to Home Base";
+      alert_header = "----------------  Heavy Rain Alert";
+      Serial.println("!!! WEATHER ALERT: RAIN !!!");
       Serial.println("SIM: Rainy - 24°C");
       break;
     case 3:
@@ -435,6 +444,10 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_rain = true;
       weather_heavy_snow = false;
       weather_black_ice = false;
+      weather_alert_triggered = true;
+      alert_message = "Return to Home Base";
+      alert_header = "----------------  Heavy Rain Alert";
+      Serial.println("!!! WEATHER ALERT: THUNDERSTORM !!!");
       Serial.println("SIM: Thunderstorm - 22°C");
       break;
     case 4:
@@ -443,6 +456,10 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_rain = false;
       weather_heavy_snow = true;
       weather_black_ice = false;
+      weather_alert_triggered = true;
+      alert_message = "Slow Down - Black Ice Detected";
+      alert_header = "------------------  Hazard Alert";
+      Serial.println("!!! WEATHER ALERT: HEAVY SNOW !!!");
       Serial.println("SIM: Heavy Snow - -5°C");
       break;
     case 5:
@@ -451,6 +468,10 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_rain = false;
       weather_heavy_snow = false;
       weather_black_ice = true;
+      weather_alert_triggered = true;
+      alert_message = "Slow Down - Black Ice Detected";
+      alert_header = "------------------  Hazard Alert";
+      Serial.println("!!! WEATHER ALERT: BLACK ICE !!!");
       Serial.println("SIM: Black Ice - -10°C");
       break;
   }
@@ -982,27 +1003,25 @@ void updateUI_NoLock() {
     lv_obj_set_style_text_opa(ui_resolved_2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
   }
 
-  if (weather_heavy_rain) {
+  if (weather_alert_triggered) 
+  {
     lv_obj_set_style_text_opa(ui_heavy_rain_alert, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_return_home, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_ALERT_LABEL1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_label_set_text(ui_heavy_rain_alert, "----------------  Heavy Rain Alert");
-    lv_label_set_text(ui_return_home, "Return to Home Base");
-    lv_label_set_text(ui_ALERT_LABEL1, "Return to Home Base");
-  } else if (weather_heavy_snow || weather_black_ice) {
-    lv_obj_set_style_text_opa(ui_heavy_rain_alert, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui_return_home, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui_ALERT_LABEL1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_label_set_text(ui_heavy_rain_alert, "------------------  Hazard Alert");
-    lv_label_set_text(ui_return_home, "Slow Down");
-    lv_label_set_text(ui_ALERT_LABEL1, "Slow Down - Black Ice Detected");
-  } else {
+    lv_label_set_text(ui_heavy_rain_alert, alert_header.c_str());
+    lv_label_set_text(ui_return_home, alert_message.c_str());
+    lv_label_set_text(ui_ALERT_LABEL1, alert_message.c_str());
+    weather_alert_active = true;
+  } 
+  else 
+  {
     lv_obj_set_style_text_opa(ui_heavy_rain_alert, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_return_home, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_ALERT_LABEL1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_label_set_text(ui_heavy_rain_alert, "");
     lv_label_set_text(ui_return_home, "");
     lv_label_set_text(ui_ALERT_LABEL1, "");
+    weather_alert_active = false;
   }
 
   bool anyAlertActive = battery_alert_active || speed_alert_active || can_error_alert_active || weather_alert_active;
@@ -1021,6 +1040,14 @@ void updateUI_NoLock() {
     lv_obj_set_style_bg_opa(ui_alert_red5, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_alert_red6, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
   }
+}
+
+void dismissWeatherAlert()
+{
+  weather_alert_triggered = false;
+  alert_message = "";
+  alert_header = "";
+  Serial.println("!!! WEATHER ALERT DISMISSED !!!");
 }
 
 // Function to check if any alert is active
@@ -1148,7 +1175,7 @@ void loop()
   // 3. Update Entertainment Page
   testMediaSimulation_DataOnly();
 
-  // 4. Update CAN Simulation
+  // 4. Use CAN Simulation
   testCANSimulation_DataOnly();
 
   // 5. Mark data as connected when running simulation

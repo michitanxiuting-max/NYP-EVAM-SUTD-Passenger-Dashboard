@@ -434,7 +434,7 @@ void testWeatherSimulation_DataOnly()
       weather_black_ice = false;
       weather_alert_triggered = true;
       alert_message = "Return to Home Base";
-      alert_header = "----------------  Heavy Rain Alert";
+      alert_header = "---------------  Heavy Rain Alert";
       Serial.println("!!! WEATHER ALERT: RAIN !!!");
       Serial.println("SIM: Rainy - 24°C");
       break;
@@ -446,7 +446,7 @@ void testWeatherSimulation_DataOnly()
       weather_black_ice = false;
       weather_alert_triggered = true;
       alert_message = "Return to Home Base";
-      alert_header = "----------------  Heavy Rain Alert";
+      alert_header = "---------------  Heavy Rain Alert";
       Serial.println("!!! WEATHER ALERT: THUNDERSTORM !!!");
       Serial.println("SIM: Thunderstorm - 22°C");
       break;
@@ -457,8 +457,8 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_snow = true;
       weather_black_ice = false;
       weather_alert_triggered = true;
-      alert_message = "Slow Down - Black Ice Detected";
-      alert_header = "------------------  Hazard Alert";
+      alert_message = "Slow Down \n - Black Ice Detected";
+      alert_header = "-----------------  Hazard Alert";
       Serial.println("!!! WEATHER ALERT: HEAVY SNOW !!!");
       Serial.println("SIM: Heavy Snow - -5°C");
       break;
@@ -469,8 +469,8 @@ void testWeatherSimulation_DataOnly()
       weather_heavy_snow = false;
       weather_black_ice = true;
       weather_alert_triggered = true;
-      alert_message = "Slow Down - Black Ice Detected";
-      alert_header = "------------------  Hazard Alert";
+      alert_message = "Slow Down \n - Black Ice Detected";
+      alert_header = "-----------------  Hazard Alert";
       Serial.println("!!! WEATHER ALERT: BLACK ICE !!!");
       Serial.println("SIM: Black Ice - -10°C");
       break;
@@ -483,7 +483,7 @@ void testWeatherSimulation_DataOnly()
 void update_weather_DataOnly()
 {
   if (WiFi.status() != WL_CONNECTED) return;
-  if (millis() - lastWeatherSim < 10000) return;
+  if (millis() - lastWeatherSim < 10000) return;  // Update every 10 seconds
   
   HTTPClient http;
   String url = "https://api.openweathermap.org/data/2.5/weather?lat=1.3521&lon=103.8198&units=metric&appid=9db52acc79376ec336f7e7b4779c9e1c";
@@ -494,7 +494,7 @@ void update_weather_DataOnly()
   
   int httpCode = http.GET();
   
-  if (httpCode == 200) 
+    if (httpCode == 200) 
   {
     String payload = http.getString();
     DynamicJsonDocument doc(1024);
@@ -505,19 +505,80 @@ void update_weather_DataOnly()
       weather_condition = doc["weather"][0]["main"].as<String>();
       weather_temp = doc["main"]["temp"].as<float>();
       
-      if (weather_condition == "Rain" || weather_condition == "Thunderstorm")
+      // ===== ALERT LOGIC FOR REAL WEATHER =====
+      // Clear previous alerts first
+      weather_alert_triggered = false;
+      weather_heavy_rain = false;
+      weather_heavy_snow = false;
+      weather_black_ice = false;
+      alert_message = "";
+      alert_header = "";
+      
+      // BLACK ICE DETECTION: Temperature below 0°C + precipitation
+      bool is_freezing = (weather_temp <= 0.0f);
+      bool has_precipitation = (weather_condition == "Rain" || weather_condition == "Drizzle" || 
+                                weather_condition == "Snow" || weather_condition == "Sleet");
+      
+      // Check weather conditions and set alerts
+      if (is_freezing && has_precipitation)
       {
+        // BLACK ICE CONDITION: freezing temp + wet surface
+        weather_alert_triggered = true;
+        weather_black_ice = true;
+        alert_message = "Slow Down \n - Black Ice Detected";
+        alert_header = "-----------------  Hazard Alert";
+        Serial.println("!!! REAL WEATHER ALERT: BLACK ICE DETECTED !!!");
+      }
+      else if (weather_condition == "Thunderstorm")
+      {
+        weather_alert_triggered = true;
         weather_heavy_rain = true;
-        weather_alert_active = true;
+        alert_message = "Return to Base";
+        alert_header = "---------------  Heavy Rain Alert";
+        Serial.println("!!! REAL WEATHER ALERT: THUNDERSTORM !!!");
+      }
+      else if (weather_condition == "Rain" || weather_condition == "Drizzle")
+      {
+        weather_alert_triggered = true;
+        weather_heavy_rain = true;
+        alert_message = "Return to Base";
+        alert_header = "---------------  Heavy Rain Alert";
+        Serial.println("!!! REAL WEATHER ALERT: RAIN !!!");
+      }
+      else if (weather_condition == "Snow" || weather_condition == "Sleet")
+      {
+        weather_alert_triggered = true;
+        weather_heavy_snow = true;
+        alert_message = "Slow Down";
+        alert_header = "-----------------  Hazard Alert";
+        Serial.println("!!! REAL WEATHER ALERT: SNOW !!!");
+      }
+      else if (weather_condition == "Mist" || weather_condition == "Fog")
+      {
+        // Optional: trigger alert for fog/mist if desired
+        // weather_alert_triggered = true;
+        // alert_message = "Reduce Speed";
+        // alert_header = "Low Visibility";
+        Serial.printf("Weather: %s (no alert)\n", weather_condition.c_str());
       }
       else
       {
-        weather_heavy_rain = false;
-        weather_alert_active = false;
+        // Normal conditions - no alert
+        weather_alert_triggered = false;
+        Serial.printf("Weather: %s - Clear\n", weather_condition.c_str());
       }
       
-      Serial.printf("Weather Updated: %s, Temp: %.1f°C\n", weather_condition.c_str(), weather_temp);
+      Serial.printf("Weather Updated: %s, Temp: %.1f°C, Alert: %s\n", 
+        weather_condition.c_str(), weather_temp, weather_alert_triggered ? "YES" : "NO");
     }
+    else
+    {
+      Serial.printf("JSON parse error: %s\n", error.c_str());
+    }
+  }
+  else
+  {
+    Serial.printf("HTTP Error: %d\n", httpCode);
   }
   
   http.end();
@@ -1194,8 +1255,8 @@ void loop()
   processCANData();
 
   // 2. Update weather data only - no LVGL calls
-  testWeatherSimulation_DataOnly();
-  // update_weather_DataOnly();
+  // testWeatherSimulation_DataOnly();
+  update_weather_DataOnly();
 
   // 3. Update Entertainment Page
   testMediaSimulation_DataOnly();
@@ -1203,7 +1264,7 @@ void loop()
   // 4. Use CAN Simulation
   testCANSimulation_DataOnly();
 
-  // 5. Mark data as connected when running simulation
+  // 5. Mark data as connected when running CAN simulation
   if (!dataConnected) {
     dataConnected = true;
     need_ui_update = true;

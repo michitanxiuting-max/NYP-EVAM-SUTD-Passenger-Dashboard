@@ -196,17 +196,17 @@ void spotify_volume_event(lv_event_t * e) {
   Serial.println(spotify_volume);
 }
 
-// Function to change radio station (can be called by next/prev buttons)
-void change_radio_station() {
-  current_radio_track = (current_radio_track + 1) % 4;
-  lv_label_set_text(ui_radio_label, radio_tracks[current_radio_track]);
-}
+// // Function to change radio station (can be called by next/prev buttons)
+// void change_radio_station() {
+//   current_radio_track = (current_radio_track + 1) % 4;
+//   lv_label_set_text(ui_radio_label, radio_tracks[current_radio_track]);
+// }
 
-// Function to change Spotify track (can be called by next/prev buttons)
-void change_spotify_track() {
-  current_spotify_track = (current_spotify_track + 1) % 4;
-  lv_label_set_text(ui_spotify_label, spotify_tracks[current_spotify_track]);
-}
+// // Function to change Spotify track (can be called by next/prev buttons)
+// void change_spotify_track() {
+//   current_spotify_track = (current_spotify_track + 1) % 4;
+//   lv_label_set_text(ui_spotify_label, spotify_tracks[current_spotify_track]);
+// }
 
 // Album art updates here
 void update_radio_album_art_NoLock()
@@ -1037,25 +1037,29 @@ void updateUI_NoLock()
     lv_obj_set_style_text_opa(ui_resolved_1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
   }
 
-  float fl_percent = (wheel_fl_rpm / 1966.0f) * 100.0f;
+  // float fl_percent = (wheel_fl_rpm / 1966.0f) * 100.0f;
+  float fl_percent = (wheel_fl_km / 250.0f) * 100.0f;
   if (fl_percent > 100.0f) fl_percent = 100.0f;
   lv_arc_set_value(ui_fl_arc, (int16_t)fl_percent);
   sprintf(buffer_fl_speed, "%.0f", wheel_fl_km);
   lv_label_set_text(ui_fl_speed, buffer_fl_speed);
 
-  float fr_percent = (wheel_fr_rpm / 1966.0f) * 100.0f;
+  // float fr_percent = (wheel_fr_rpm / 1966.0f) * 100.0f;
+  float fr_percent = (wheel_fr_km / 250.0f) * 100.0f;
   if (fr_percent > 100.0f) fr_percent = 100.0f;
   lv_arc_set_value(ui_fr_arc, (int16_t)fr_percent);
   sprintf(buffer_fr_speed, "%.0f", wheel_fr_km);
   lv_label_set_text(ui_fr_speed, buffer_fr_speed);
 
-  float bl_percent = (wheel_bl_rpm / 1966.0f) * 100.0f;
+  // float bl_percent = (wheel_bl_rpm / 1966.0f) * 100.0f;
+  float bl_percent = (wheel_bl_km / 250.0f) * 100.0f;
   if (bl_percent > 100.0f) bl_percent = 100.0f;
   lv_arc_set_value(ui_bl_arc, (int16_t)bl_percent);
   sprintf(buffer_bl_speed, "%.0f", wheel_bl_km);
   lv_label_set_text(ui_bl_speed, buffer_bl_speed);
 
-  float br_percent = (wheel_br_rpm / 1966.0f) * 100.0f;
+  // float br_percent = (wheel_br_rpm / 1966.0f) * 100.0f;
+  float br_percent = (wheel_br_km / 250.0f) * 100.0f;
   if (br_percent > 100.0f) br_percent = 100.0f;
   lv_arc_set_value(ui_br_arc, (int16_t)br_percent);
   sprintf(buffer_br_speed, "%.0f", wheel_br_km);
@@ -1128,13 +1132,13 @@ void updateUI_NoLock()
   }
 }
 
-void dismissWeatherAlert()
-{
-  weather_alert_triggered = false;
-  alert_message = "";
-  alert_header = "";
-  Serial.println("!!! WEATHER ALERT DISMISSED !!!");
-}
+// void dismissWeatherAlert()
+// {
+//   weather_alert_triggered = false;
+//   alert_message = "";
+//   alert_header = "";
+//   Serial.println("!!! WEATHER ALERT DISMISSED !!!");
+// }
 
 // Function to check if any alert is active
 bool isAnyAlertActive() 
@@ -1262,13 +1266,13 @@ void loop()
   testMediaSimulation_DataOnly();
 
   // 4. Use CAN Simulation
-  testCANSimulation_DataOnly();
+  // testCANSimulation_DataOnly();
 
   // 5. Mark data as connected when running CAN simulation
-  if (!dataConnected) {
-    dataConnected = true;
-    need_ui_update = true;
-  }
+  // if (!dataConnected) {
+  //   dataConnected = true;
+  //   need_ui_update = true;
+  // }
 
   // Print every 100ms - SIMPLE DEBUG
   if (millis() - lastSerialPrint >= 100)

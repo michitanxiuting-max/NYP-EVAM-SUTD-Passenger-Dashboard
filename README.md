@@ -8,3 +8,7 @@ ITEMS USED:
 2. LVGL --> SLS for GUI
 3. CAN BUS system from EVAM Car
 4. USB-CAN-A --> to simulate data
+
+sketch_nov6b ==> codes
+flowchart ==> all flowcharts
+EVAM HUD 21-10 ver ==> PCB Creation for HUD

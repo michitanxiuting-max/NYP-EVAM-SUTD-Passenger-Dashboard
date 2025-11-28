@@ -1,10 +1,10 @@
 #include "can_data_parser.h"
 #include <string.h> // for memset
 
-// Initialize global vehicle data
+// ===== Initialize Global Vehicle Data =====
 VehicleData_t vehicleData = {0};
 
-// Initialize the data structure
+// ===== Initialize the Data Structure =====
 void can_data_init() 
 {
     vehicleData.ecu_byte0 = 0;
@@ -36,7 +36,7 @@ void can_data_init()
     vehicleData.last_update = 0;
 }
 
-// Parse CAN messages and extract data
+// ===== Parse CAN Messages and Extract Data =====
 void can_data_parse(twai_message_t &message) {
     switch(message.identifier) {
         case CAN_ID_ECU_STATUS:  // 0x08
@@ -46,12 +46,10 @@ void can_data_parse(twai_message_t &message) {
 
                 vehicleData.ecu_valid = true;
                 vehicleData.last_update = millis();
-                // delay(100);
                 
                 Serial.printf("[0x08] ECU Status - Byte0: 0x%02X (%d), Byte1: 0x%02X (%d)\n", 
                              vehicleData.ecu_byte0, vehicleData.ecu_byte0,
                              vehicleData.ecu_byte1, vehicleData.ecu_byte1);
-                             // delay(100);
             }
             break;
             
@@ -67,13 +65,13 @@ void can_data_parse(twai_message_t &message) {
             vehicleData.data_0x24_valid = true;
             vehicleData.last_update = millis();
             
-            // Calculate battery voltage: (B1*256 + B0)*0.1
+            // --- Calculate battery voltage: (B1*256 + B0)*0.1 ---
             vehicleData.battery_voltage = (vehicleData.data_0x24[1] * 256 + vehicleData.data_0x24[0]) * 0.1;
-            // Calculate battery current: -320 + (B3*256 + B2)*0.1
+            // --- Calculate battery current: -320 + (B3*256 + B2)*0.1 ---
             vehicleData.battery_current = -320.0 + (vehicleData.data_0x24[3] * 256 + vehicleData.data_0x24[2]) * 0.1;
-            // Calculate highest cell temp: B7 - 40 (assuming B8 means index 7)
+            // --- Calculate highest cell temp: B7 - 40 (assuming B8 means index 7) ---
             vehicleData.highest_cell_temp = (float)((int8_t)vehicleData.data_0x24[7]) - 40.0f;
-            // BATTERY SOC
+            // --- Battery SOC ---
             vehicleData.SOC = (vehicleData.data_0x24[6]);
 
             Serial.printf("[0x24] BATTERY - Voltage: %.1fV, Current: %.1fA, Temp: %d°C, SOC: %.1f%\n",
@@ -98,7 +96,7 @@ void can_data_parse(twai_message_t &message) {
             vehicleData.data_0x34_valid = true;
             vehicleData.last_update = millis();
 
-            // Calculate wheel speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H  
+            // --- Calculate wheel speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H ---
             vehicleData.wheel_fl_rpm = (vehicleData.data_0x34[1] * 256 + vehicleData.data_0x34[0]) / 30.0;
             vehicleData.wheel_fl_km = (vehicleData.data_0x34[1] * 256 + vehicleData.data_0x34[0]) / 256;
             
@@ -117,7 +115,7 @@ void can_data_parse(twai_message_t &message) {
             vehicleData.data_0x35_valid = true;
             vehicleData.last_update = millis();
 
-            // Calculate wheel speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H  
+            // --- Calculate Wheel Speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H ---  
             vehicleData.wheel_fr_rpm = (vehicleData.data_0x35[1] * 256 + vehicleData.data_0x35[0]) / 30.0;
             vehicleData.wheel_fr_km = (vehicleData.data_0x35[1] * 256 + vehicleData.data_0x35[0]) / 256;
             
@@ -136,7 +134,7 @@ void can_data_parse(twai_message_t &message) {
             vehicleData.data_0x36_valid = true;
             vehicleData.last_update = millis();
             
-            // Calculate wheel speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H  
+            // --- Calculate Wheel Speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H ---
             vehicleData.wheel_bl_rpm = (vehicleData.data_0x36[1] * 256 + vehicleData.data_0x36[0]) / 30.0;
             vehicleData.wheel_bl_km = (vehicleData.data_0x36[1] * 256 + vehicleData.data_0x36[0]) / 256;
             
@@ -155,7 +153,7 @@ void can_data_parse(twai_message_t &message) {
             vehicleData.data_0x37_valid = true;
             vehicleData.last_update = millis();
             
-            // Calculate wheel speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H  
+            // --- Calculate wheel speed: (B1*256 + B0)/30 RPM  (B1*256 + B0)/256 KM/H ---
             vehicleData.wheel_br_rpm = (vehicleData.data_0x37[1] * 256 + vehicleData.data_0x37[0]) / 30.0;
             vehicleData.wheel_br_km = (vehicleData.data_0x37[1] * 256 + vehicleData.data_0x37[0]) / 256;
             
@@ -174,7 +172,7 @@ void can_data_parse(twai_message_t &message) {
             vehicleData.data_0x38_valid = true;
             vehicleData.last_update = millis();
             
-            // Calculate overall speed: (B1*256 + B0)/256
+            // --- Calculate Overall Speed: (B1*256 + B0)/256 ---
             vehicleData.speed_kmh = (vehicleData.data_0x38[1] * 256 + vehicleData.data_0x38[0]) / 256.0;
 
             Serial.printf("[0x38] Overall Speed: %.1f km/h\n", vehicleData.speed_kmh);
@@ -186,20 +184,13 @@ void can_data_parse(twai_message_t &message) {
             break;
             
         default:
-            // Other message IDs - ignore
+            // --- Other message IDs - ignore ---
             break;
     }
 }
 
-// Check if data is fresh (received recently)
-// bool can_data_is_fresh(unsigned long timeout_ms) {
-//     if (!vehicleData.ecu_valid) return false;
-//     return (millis() - vehicleData.last_update) < timeout_ms;
-//     delay(100);
-// }
-
 bool can_data_is_fresh(unsigned long timeout_ms) {
-    // Check if we have ANY valid data (not just ECU)
+    // --- Check if we have ANY valid data ---
     bool any_valid = vehicleData.ecu_valid || 
                      vehicleData.data_0x24_valid || 
                      vehicleData.data_0x34_valid || 

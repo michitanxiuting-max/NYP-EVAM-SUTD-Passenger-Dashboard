@@ -5,12 +5,12 @@
 #include "lvgl_v8_port.h"
 #include "waveshare_twai_port.h"
 #include "can_data_parser.h"
-// Weather
+// ===== Weather =====
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-// Media Player - Radio Spotify
+// ===== Media Player - Radio Spotify =====
 #include "esp_http_client.h"
 #include "cJSON.h"
 
@@ -18,13 +18,13 @@
 #define ESP_LOGI(tag, format, ...) Serial.printf("[%s] " format "\n", tag, ##__VA_ARGS__)
 #define ESP_LOGE(tag, format, ...) Serial.printf("[%s] ERROR: " format "\n", tag, ##__VA_ARGS__)
 
-// MEDIA PLAYER DATA STRUCTURES
+// ===== Media Player Data Structures =====
 bool radio_playing = false;
 bool spotify_playing = false;
 int radio_volume = 50;
 int spotify_volume = 50;
 
-// Sample track names
+// ===== Sample Track Names =====
 const char* radio_tracks[] = {
   "FM 95.8 - Classic Hits",
   "FM 97.2 - Chinese Love Music",
@@ -42,7 +42,7 @@ const char* spotify_tracks[] = {
 int current_radio_track = 0;
 int current_spotify_track = 0;
 
-// Album
+// ===== Album Pictures =====
 extern const lv_img_dsc_t album_1;
 extern const lv_img_dsc_t album_2;
 extern const lv_img_dsc_t album_3;
@@ -66,13 +66,13 @@ unsigned long lastMapUpdate = 0;
 unsigned long lastRadioSim = 0;
 unsigned long lastSpotifySim = 0;
 
-// Data timeout tracking (ms)
+// ===== Data timeout tracking (ms) =====
 #define DATA_TIMEOUT_MS 2000
 unsigned long lastCANDataTime = 0;
 bool dataConnected = false;
 static bool need_ui_update = false;
 
-// ===== VEHICLE DATA =====
+// ===== Vehicle Data =====
 float SOC = 0.0;
 float battery_voltage = 0.0;
 int highest_cell_temp = 0;
@@ -90,7 +90,7 @@ uint8_t ecu_byte0 = 255;
 uint8_t ecu_byte1 = 0;
 String ecu_status = "OFFLINE";
 
-// ===== WEATHER DATA =====
+// ===== Weather Data =====
 String weather_condition = "Loading...";
 float weather_temp = 0.0;
 bool weather_heavy_rain = false;
@@ -100,14 +100,14 @@ static bool weather_alert_triggered = false;  // Persistent flag
 static String alert_message = "";
 static String alert_header = "";
 
-// ===== STATE TRACKING =====
+// ===== State Tracking =====
 static bool driver_installed = false;
 static bool speed_alert_active = false;
 static bool battery_alert_active = false;
 static bool can_error_alert_active = false;
 static bool weather_alert_active = false;
 
-// ===== BUFFERS =====
+// ===== Buffers =====
 char buffer_overall_speed[32];
 char buffer_batt_percent[16];
 char buffer_batt_volts[16];
@@ -119,14 +119,14 @@ char buffer_br_speed[16];
 char buffer_ecu[16];
 char buffer_temp_percent[16];
 
-// Add these variables near the top with other state tracking
+// ===== Add these variables near the top with other state tracking =====
 static bool last_alert_state = false;  // Track previous alert state
 static lv_disp_draw_buf_t* last_page = NULL;  // Track current page
 
 using namespace esp_panel::drivers;
 using namespace esp_panel::board;
 
-// ===== WIFI SETUP =====
+// ===== Wi-Fi Setup =====
 void wifiSetup() 
 {
   printf("Connecting to WiFi...");
@@ -151,8 +151,8 @@ void wifiSetup()
   }
 }
 
-// Media Player callback 
-// for Radio Play/Pause button (button_label3)
+// ===== Media Player Callback ===== 
+// ---- for Radio Play/Pause button (button_label3) ---
 void radio_play_pause_event(lv_event_t * e) {
   radio_playing = !radio_playing;
   
@@ -166,7 +166,7 @@ void radio_play_pause_event(lv_event_t * e) {
   }
 }
 
-// for Spotify Play/Pause button (button_label2)
+// --- for Spotify Play/Pause button (button_label2) ---
 void spotify_play_pause_event(lv_event_t * e) {
   spotify_playing = !spotify_playing;
   
@@ -180,7 +180,7 @@ void spotify_play_pause_event(lv_event_t * e) {
   }
 }
 
-// Event callback for Radio volume slider
+// ===== Event callback for Radio volume slider =====
 void radio_volume_event(lv_event_t * e) {
   radio_volume = lv_slider_get_value(ui_Slider1);
   // Update volume display if you have one
@@ -188,7 +188,7 @@ void radio_volume_event(lv_event_t * e) {
   Serial.println(radio_volume);
 }
 
-// Event callback for Spotify volume slider
+// ===== Event callback for Spotify volume slider =====
 void spotify_volume_event(lv_event_t * e) {
   spotify_volume = lv_slider_get_value(ui_Slider3);
   // Update volume display if you have one
@@ -196,19 +196,7 @@ void spotify_volume_event(lv_event_t * e) {
   Serial.println(spotify_volume);
 }
 
-// // Function to change radio station (can be called by next/prev buttons)
-// void change_radio_station() {
-//   current_radio_track = (current_radio_track + 1) % 4;
-//   lv_label_set_text(ui_radio_label, radio_tracks[current_radio_track]);
-// }
-
-// // Function to change Spotify track (can be called by next/prev buttons)
-// void change_spotify_track() {
-//   current_spotify_track = (current_spotify_track + 1) % 4;
-//   lv_label_set_text(ui_spotify_label, spotify_tracks[current_spotify_track]);
-// }
-
-// Album art updates here
+// ===== Album Art Updates Here =====
 void update_radio_album_art_NoLock()
 {
   const void* radio_images[] = {
@@ -233,10 +221,10 @@ void update_spotify_album_art_NoLock()
   lv_img_set_src(ui_SpotifyPicture, spotify_images[current_spotify_track]);
 }
 
-// ===== MEDIA SIMULATION =====
+// ===== Media Simulation =====
 void testMediaSimulation_DataOnly()
 {
-  // Radio simulation - cycle every 8 seconds
+  // --- Radio simulation - cycle every 8 seconds ---
   if (radio_playing && (millis() - lastRadioSim >= 8000)) 
   {
     static int radio_cycle = 0;
@@ -246,7 +234,7 @@ void testMediaSimulation_DataOnly()
     Serial.printf("SIM: Radio switched to - %s (index: %d)\n", radio_tracks[current_radio_track], current_radio_track);
   }
   
-  // Spotify simulation - cycle every 6 seconds
+  // --- Spotify simulation - cycle every 6 seconds ---
   if (spotify_playing && (millis() - lastSpotifySim >= 6000)) 
   {
     static int spotify_cycle = 0;
@@ -257,9 +245,9 @@ void testMediaSimulation_DataOnly()
   }
 }
 
-// Setup entertainment page - FIXED
+// --- Setup entertainment page ---
 void setup_entertainment_page() {
-  // Initialize Radio Section
+  // --- Initialize Radio Section ---
   lv_label_set_text(ui_radio_label, radio_tracks[0]);
   lv_label_set_text(ui_button_label3, LV_SYMBOL_PLAY);
   
@@ -270,11 +258,11 @@ void setup_entertainment_page() {
   lv_obj_t * radio_button = lv_obj_get_parent(ui_button_label3);
   lv_obj_add_event_cb(radio_button, radio_play_pause_event, LV_EVENT_CLICKED, NULL);
   
-  // Set initial radio image
+  // --- Set initial radio image ---
   lv_img_set_src(ui_RadioPicture, &album_1);
   
   
-  // Initialize Spotify Section
+  // --- Initialize Spotify Section ---
   lv_label_set_text(ui_spotify_label, spotify_tracks[0]);
   lv_label_set_text(ui_button_label2, LV_SYMBOL_PLAY);
   
@@ -285,14 +273,14 @@ void setup_entertainment_page() {
   lv_obj_t * spotify_button = lv_obj_get_parent(ui_button_label2);
   lv_obj_add_event_cb(spotify_button, spotify_play_pause_event, LV_EVENT_CLICKED, NULL);
   
-  // Set initial Spotify image
+  // --- Set initial Spotify image ---
   lv_img_set_src(ui_SpotifyPicture, &spotify_1);
 
   Serial.println("Entertainment page initialized!");
 }
 
 void update_entertainment_page_NoLock() {
-  // Update album art colors
+  // --- Update album art colors ---
   update_radio_album_art_NoLock();
   update_spotify_album_art_NoLock();
   
@@ -300,7 +288,7 @@ void update_entertainment_page_NoLock() {
   lv_label_set_text(ui_radio_label, radio_tracks[current_radio_track]);
   lv_label_set_text(ui_spotify_label, spotify_tracks[current_spotify_track]);
 
-  // Debug: print current indices
+  // --- Debug: print current indices ---
   static unsigned long lastDebugPrint = 0;
   if (millis() - lastDebugPrint >= 1000) {
     Serial.printf("DEBUG: Radio index=%d, Spotify index=%d | Playing: Radio=%d, Spotify=%d\n", 
@@ -309,7 +297,7 @@ void update_entertainment_page_NoLock() {
   }
 }
 
-// ===== WEATHER FUNCTIONS =====
+// ===== Weather Functions =====
 void updateWeatherLabel_NoLock(String condition) 
 {
   if (condition == "Clear" || condition == "Sunny") 
@@ -506,7 +494,7 @@ void update_weather_DataOnly()
       weather_temp = doc["main"]["temp"].as<float>();
       
       // ===== ALERT LOGIC FOR REAL WEATHER =====
-      // Clear previous alerts first
+      // --- Clear previous alerts first --- 
       weather_alert_triggered = false;
       weather_heavy_rain = false;
       weather_heavy_snow = false;
@@ -514,15 +502,15 @@ void update_weather_DataOnly()
       alert_message = "";
       alert_header = "";
       
-      // BLACK ICE DETECTION: Temperature below 0°C + precipitation
+      // --- BLACK ICE DETECTION: Temperature below 0°C + precipitation ---
       bool is_freezing = (weather_temp <= 0.0f);
       bool has_precipitation = (weather_condition == "Rain" || weather_condition == "Drizzle" || 
                                 weather_condition == "Snow" || weather_condition == "Sleet");
       
-      // Check weather conditions and set alerts
+      // --- Check weather conditions and set alerts ---
       if (is_freezing && has_precipitation)
       {
-        // BLACK ICE CONDITION: freezing temp + wet surface
+        // --- BLACK ICE CONDITION: freezing temp + wet surface ---
         weather_alert_triggered = true;
         weather_black_ice = true;
         alert_message = "Slow Down \n - Black Ice Detected";
@@ -553,14 +541,6 @@ void update_weather_DataOnly()
         alert_header = "-----------------  Hazard Alert";
         Serial.println("!!! REAL WEATHER ALERT: SNOW !!!");
       }
-      else if (weather_condition == "Mist" || weather_condition == "Fog")
-      {
-        // Optional: trigger alert for fog/mist if desired
-        // weather_alert_triggered = true;
-        // alert_message = "Reduce Speed";
-        // alert_header = "Low Visibility";
-        Serial.printf("Weather: %s (no alert)\n", weather_condition.c_str());
-      }
       else
       {
         // Normal conditions - no alert
@@ -585,7 +565,7 @@ void update_weather_DataOnly()
   lastWeatherSim = millis();
 }
 
-// ===== CAN DATA FUNCTIONS =====
+// ===== CAN Data Functions =====
 void processCANData() 
 {
   if (!driver_installed) return;
@@ -669,7 +649,7 @@ void processCANData()
   }
 }
 
-// ===== CAN DATA SIMULATOR =====
+// ===== CAN Data Simulator =====
 unsigned long lastCANSim = 0;
 #define CAN_SIM_INTERVAL 15000  // Change scenario every 15 seconds
 
@@ -681,7 +661,7 @@ void testCANSimulation_DataOnly()
   
   switch(can_scenario) 
   {
-    // SCENARIO 0: Everything Normal - Green Dashboard
+    // --- SCENARIO 0: Everything Normal - Green Dashboard ---
     case 0:
       SOC = 85.0;
       battery_voltage = 98.5;
@@ -701,7 +681,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: Normal Operation - All Systems OK");
       break;
     
-    // SCENARIO 1: All Errors - Red Dashboard
+    // --- SCENARIO 1: All Errors - Red Dashboard ---
     case 1:
       SOC = 15.0;  // Low battery
       battery_voltage = 102.5;  // High voltage
@@ -722,7 +702,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: CRITICAL ERRORS - All Alerts Active");
       break;
     
-    // SCENARIO 2: Moderate Speed, Good Battery
+    // --- SCENARIO 2: Moderate Speed, Good Battery ---
     case 2:
       SOC = 72.0;
       battery_voltage = 97.2;
@@ -743,7 +723,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: Moderate Speed Cruising - Stable");
       break;
     
-    // SCENARIO 3: Low Battery Warning
+    // --- SCENARIO 3: Low Battery Warning ---
     case 3:
       SOC = 25.0;  // Low battery
       battery_voltage = 95.8;
@@ -764,7 +744,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: Low Battery - Return to Base");
       break;
     
-    // SCENARIO 4: High Temperature Warning
+    // --- SCENARIO 4: High Temperature Warning ---
     case 4:
       SOC = 60.0;
       battery_voltage = 99.0;
@@ -785,7 +765,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: High Temperature - Slow Down");
       break;
     
-    // SCENARIO 5: High Speed
+    // --- SCENARIO 5: High Speed ---
     case 5:
       SOC = 55.0;
       battery_voltage = 96.5;
@@ -806,7 +786,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: High Speed - Overspeed Alert");
       break;
     
-    // SCENARIO 6: Rainy Weather
+    // --- SCENARIO 6: Rainy Weather ---
     case 6:
       SOC = 78.0;
       battery_voltage = 98.0;
@@ -827,7 +807,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: Heavy Rain - Slow Driving");
       break;
     
-    // SCENARIO 7: Black Ice / Snow
+    // --- SCENARIO 7: Black Ice / Snow ---
     case 7:
       SOC = 82.0;
       battery_voltage = 99.0;
@@ -848,7 +828,7 @@ void testCANSimulation_DataOnly()
       Serial.println("SIM: Black Ice Detected - Extreme Caution");
       break;
     
-    // SCENARIO 8: CAN Bus Offline
+    // --- SCENARIO 8: CAN Bus Offline ---
     case 8:
       ecu_byte0 = 255;  // OFFLINE
       ecu_byte1 = 0;
@@ -856,11 +836,12 @@ void testCANSimulation_DataOnly()
       break;
   }
   
-  // Move to next scenario
+  // --- Move to next scenario ---
   can_scenario = (can_scenario + 1) % 9;  // 9 scenarios (0-8)
   lastCANSim = millis();
 }
 
+// ===== Resting UI =====
 void resetUIToOffline_NoLock()
 {
   SOC = 0.0;
@@ -928,6 +909,7 @@ void resetUIToOffline_NoLock()
   lv_obj_set_style_text_opa(ui_resolved_2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
+// ===== Updating UI =====
 void updateUI_NoLock() 
 {
   if (ecu_byte0 == 255) 
@@ -1043,28 +1025,28 @@ void updateUI_NoLock()
     lv_obj_set_style_text_opa(ui_resolved_1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
   }
 
-  // float fl_percent = (wheel_fl_rpm / 1966.0f) * 100.0f;
+  // --- float fl_percent = (wheel_fl_rpm / 1966.0f) * 100.0f; ---
   float fl_percent = (wheel_fl_km / 250.0f) * 100.0f;
   if (fl_percent > 100.0f) fl_percent = 100.0f;
   lv_arc_set_value(ui_fl_arc, (int16_t)fl_percent);
   sprintf(buffer_fl_speed, "%.0f", wheel_fl_km);
   lv_label_set_text(ui_fl_speed, buffer_fl_speed);
 
-  // float fr_percent = (wheel_fr_rpm / 1966.0f) * 100.0f;
+  // --- float fr_percent = (wheel_fr_rpm / 1966.0f) * 100.0f; ---
   float fr_percent = (wheel_fr_km / 250.0f) * 100.0f;
   if (fr_percent > 100.0f) fr_percent = 100.0f;
   lv_arc_set_value(ui_fr_arc, (int16_t)fr_percent);
   sprintf(buffer_fr_speed, "%.0f", wheel_fr_km);
   lv_label_set_text(ui_fr_speed, buffer_fr_speed);
 
-  // float bl_percent = (wheel_bl_rpm / 1966.0f) * 100.0f;
+  // --- float bl_percent = (wheel_bl_rpm / 1966.0f) * 100.0f; ---
   float bl_percent = (wheel_bl_km / 250.0f) * 100.0f;
   if (bl_percent > 100.0f) bl_percent = 100.0f;
   lv_arc_set_value(ui_bl_arc, (int16_t)bl_percent);
   sprintf(buffer_bl_speed, "%.0f", wheel_bl_km);
   lv_label_set_text(ui_bl_speed, buffer_bl_speed);
 
-  // float br_percent = (wheel_br_rpm / 1966.0f) * 100.0f;
+  // --- float br_percent = (wheel_br_rpm / 1966.0f) * 100.0f; ---
   float br_percent = (wheel_br_km / 250.0f) * 100.0f;
   if (br_percent > 100.0f) br_percent = 100.0f;
   lv_arc_set_value(ui_br_arc, (int16_t)br_percent);
@@ -1138,27 +1120,20 @@ void updateUI_NoLock()
   }
 }
 
-// void dismissWeatherAlert()
-// {
-//   weather_alert_triggered = false;
-//   alert_message = "";
-//   alert_header = "";
-//   Serial.println("!!! WEATHER ALERT DISMISSED !!!");
-// }
-
-// Function to check if any alert is active
+// ===== Function to Check if Any Alert is Active =====
 bool isAnyAlertActive() 
 {
   return battery_alert_active || speed_alert_active || can_error_alert_active || weather_alert_active || weather_alert_triggered;
 }
 
-// Function to switch to alert page (Screen3)
+// ===== Function to Switch to Alert Page (Screen3) =====
 void switchToAlertPage_Lock() 
 {
   lv_disp_load_scr(ui_Screen3);
   Serial.println(">>> SWITCHED TO ALERT PAGE (Screen3) <<<");
 }
 
+// ===== Setup =====
 void setup() {
   Serial.begin(115200);
   driver_installed = waveshare_twai_init();
@@ -1187,6 +1162,7 @@ void setup() {
   lvgl_port_lock(-1);
   ui_init();
 
+  // --- Configuring UI ---
   lv_arc_set_range(ui_can_stats_arc, 0, 100);
   lv_arc_set_range(ui_car_stats_arc, 0, 100);
   lv_arc_set_range(ui_batt_arc, 0, 100);
@@ -1251,36 +1227,36 @@ void setup() {
 
   lv_obj_set_style_bg_opa(ui_weatherslider, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
   
-  // Setup entertainment page
+  // --- Setup entertainment page ---
   setup_entertainment_page();
 
   lvgl_port_unlock();
   printf("Dashboard initialized\n");
 }
 
-// ===== MAIN LOOP =====
+// ===== Main Loop =====
 void loop() 
 {
-  // 1. Process CAN data (no lock needed)
+  // --- 1. Process CAN data (no lock needed) ---
   processCANData();
 
-  // 2. Update weather data only - no LVGL calls
-  // testWeatherSimulation_DataOnly();
-  update_weather_DataOnly();
+  // --- 2. Update weather data only - no LVGL calls ---
+  // testWeatherSimulation_DataOnly(); // comment this line if using real weather data
+  update_weather_DataOnly(); // comment this line if using simulated weather data
 
-  // 3. Update Entertainment Page
+  // --- 3. Update Entertainment Page ---
   testMediaSimulation_DataOnly();
 
-  // 4. Use CAN Simulation
-  testCANSimulation_DataOnly();
+  // // --- 4. Use CAN Simulation ---
+  // testCANSimulation_DataOnly(); // comment this line if using real CAN Data
 
-  // 5. Mark data as connected when running CAN simulation
-  if (!dataConnected) {
-    dataConnected = true;
-    need_ui_update = true;
-  }
+  // // --- 5. Mark data as connected when running CAN simulation ---
+  // if (!dataConnected) {
+  //   dataConnected = true;
+  //   need_ui_update = true;
+  // }
 
-  // Print every 100ms - SIMPLE DEBUG
+  // --- Print every 100ms - SIMPLE DEBUG ---
   if (millis() - lastSerialPrint >= 100)
   {
     Serial.print("CONNECTED: ");
@@ -1294,7 +1270,7 @@ void loop()
     lastSerialPrint = millis();
   }
 
-  // MAIN LVGL UPDATE BLOCK WITH ALERT DETECTION
+  // --- Main LVGL Update Block with Alert Detection ---
   if (millis() - lastUIUpdate >= 30)
   {
     lvgl_port_lock(-1);
@@ -1317,17 +1293,17 @@ void loop()
       updateUI_NoLock();
     }
 
-    // ===== ALERT PAGE AUTO-SWITCH LOGIC =====
+    // --- Alert Page Auto-Switch Logic ---
     bool current_alert_state = isAnyAlertActive();
     
-    // If alert just became active, switch to alert page immediately
+    // --- If alert just became active, switch to alert page immediately ---
     if (current_alert_state && !last_alert_state) {
       switchToAlertPage_Lock();
       Serial.println("!!! ALERT TRIGGERED - SWITCHING TO ALERT PAGE !!!");
     }
     
     last_alert_state = current_alert_state;
-    // ===== END ALERT LOGIC =====
+    // --- End of Alert Logic ---
     
     lvgl_port_unlock();
     lastUIUpdate = millis();
